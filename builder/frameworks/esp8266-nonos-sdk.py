@@ -156,9 +156,10 @@ env.Append(
 
 libs = []
 
-libs.append(env.BuildLibrary(
-    join(FRAMEWORK_DIR, "lib", "driver"),
-    join(FRAMEWORK_DIR, "driver_lib")
-))
+if False:
+    libs.append(env.BuildLibrary(
+        join(FRAMEWORK_DIR, "lib", "driver"),
+        join(FRAMEWORK_DIR, "driver_lib")
+    ))
 
 env.Prepend(LIBS=libs)
