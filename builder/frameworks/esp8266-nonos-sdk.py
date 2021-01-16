@@ -80,14 +80,7 @@ env.Append(
         join(FRAMEWORK_DIR, "include"),
         join(FRAMEWORK_DIR, "extra_include"),
         join(FRAMEWORK_DIR, "driver_lib", "include"),
-        join(FRAMEWORK_DIR, "include", "espressif"),
-        join(FRAMEWORK_DIR, "include", "lwip"),
-        join(FRAMEWORK_DIR, "include", "lwip", "ipv4"),
-        join(FRAMEWORK_DIR, "include", "lwip", "ipv6"),
-        join(FRAMEWORK_DIR, "include", "nopoll"),
-        join(FRAMEWORK_DIR, "include", "ssl"),
-        join(FRAMEWORK_DIR, "include", "json"),
-        join(FRAMEWORK_DIR, "include", "openssl")
+        join(FRAMEWORK_DIR, "third_party", "include")
     ],
 
     LIBPATH=[
