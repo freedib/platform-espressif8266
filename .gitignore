@@ -1,0 +1,4 @@
+*.pyc
+.pioenvs
+.project
+.pydevproject
