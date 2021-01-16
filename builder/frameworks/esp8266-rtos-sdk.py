@@ -129,9 +129,10 @@ env.Append(
 env.Append(ASFLAGS=env.get("CCFLAGS", [])[:])
 
 if not env.BoardConfig().get("build.ldscript", ""):
-    env.Replace(
-        LDSCRIPT_PATH=join(FRAMEWORK_DIR, "ld", "eagle.app.v6.ld"),
-    )
+    if not env.get('LDSCRIPT_PATH', None):
+        env.Replace(
+            LDSCRIPT_PATH=join(FRAMEWORK_DIR, "ld", "eagle.app.v6.ld"),
+        )
 
 # Extra flash images
 board_flash_size = int(env.BoardConfig().get("upload.maximum_size", 0))
