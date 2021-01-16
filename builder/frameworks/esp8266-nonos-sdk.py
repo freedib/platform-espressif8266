@@ -20,7 +20,7 @@ ESP8266 SDK C/C++ only
 https://github.com/espressif/ESP8266_NONOS_SDK
 """
 
-from os.path import isdir, join
+from os.path import isdir, join, isfile
 
 from SCons.Script import Builder, DefaultEnvironment
 
@@ -140,11 +140,16 @@ elif board_flash_size > 524288:
 else:
     init_data_flash_address = 0x7c000  # for 512 kB
 
+esp_init_data_default_file = "esp_init_data_default_v08.bin"       # new in NONS 3.04
+if not isfile(join(FRAMEWORK_DIR, "bin", esp_init_data_default_file)):
+    esp_init_data_default_file = "esp_init_data_default.bin"
+env.Append(ESP_INIT_DATA_DEFAULT_FILE=esp_init_data_default_file)  # for custom downloader
+
 env.Append(
     FLASH_EXTRA_IMAGES=[
         ("0x10000", join("$BUILD_DIR", "${PROGNAME}.bin.irom0text.bin")),
         (hex(init_data_flash_address),
-            join(FRAMEWORK_DIR, "bin", "esp_init_data_default.bin")),
+            join(FRAMEWORK_DIR, "bin", esp_init_data_default_file)),
         (hex(init_data_flash_address + 0x2000),
             join(FRAMEWORK_DIR, "bin", "blank.bin"))
     ]
