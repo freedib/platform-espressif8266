@@ -91,7 +91,7 @@ env.Append(
 
     LIBS=[
         "airkiss", "at", "c", "crypto", "driver", "espnow", "gcc", "json",
-        "lwip", "main", "mbedtls", "mesh", "net80211", "phy", "pp", "pwm",
+        "lwip", "main", "mbedtls", "net80211", "phy", "pp", "pwm",
         "smartconfig", "ssl", "upgrade", "wpa", "wpa2", "wps"
     ],
 
