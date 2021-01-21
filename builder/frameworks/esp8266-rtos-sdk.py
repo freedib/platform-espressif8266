@@ -21,7 +21,7 @@ microcontrollers
 https://github.com/espressif/ESP8266_RTOS_SDK
 """
 
-from os.path import isdir, join
+from os.path import isdir, join, isfile
 
 from SCons.Script import Builder, DefaultEnvironment
 
@@ -132,28 +132,16 @@ env.Append(ASFLAGS=env.get("CCFLAGS", [])[:])
 ###################################################################################
 
 # evaluate SPI_FLASH_SIZE_MAP flag for NONOS_SDK 3.x and set CCFLAG
-
 c1 = True               # if c1, for OTA use 1024+1024, else 512+512
-
 board_flash_size = int(env.BoardConfig().get("upload.maximum_size", 524288))
-
-if board_flash_size == 16777216:                 # 0x1000000  16M 1024+1024
-    flash_size_map = 9
-elif board_flash_size == 8388608:                # 0x800000    8M 1024+1024
-    flash_size_map = 8
-elif board_flash_size == 4194304 and c1:         # 0x400000    4M 1024+1024
-    flash_size_map = 6 
-elif board_flash_size == 2097152 and c1:         # 0x200000    2M 1024+1024
-    flash_size_map = 5    
-elif board_flash_size == 4194304 and not c1:     # 0x400000    4M 512+512
-    flash_size_map = 4
-elif board_flash_size == 2097152 and not c1:     # 0x200000    2M 512+512
-    flash_size_map = 3
-elif board_flash_size == 1048576:                # 0x100000    1M 512+512
-    flash_size_map = 2
-else:                                            #  0x80000    512K no OTA
-    flash_size_map = 1
-
+if board_flash_size == 16777216:             flash_size_map = 9    # 0x1000000  16M 1024+1024
+elif board_flash_size == 8388608:            flash_size_map = 8    # 0x800000    8M 1024+1024
+elif board_flash_size == 4194304 and c1:     flash_size_map = 6    # 0x400000    4M 1024+1024
+elif board_flash_size == 2097152 and c1:     flash_size_map = 5    # 0x200000    2M 1024+1024
+elif board_flash_size == 4194304 and not c1: flash_size_map = 4    # 0x400000    4M 512+512
+elif board_flash_size == 2097152 and not c1: flash_size_map = 3    # 0x200000    2M 512+512
+elif board_flash_size == 1048576:            flash_size_map = 2    # 0x100000    1M 512+512
+else:                                        flash_size_map = 1    #  0x80000    512K no OTA
 # for OTA, only size maps 5, 6, 8 and 9 are supported to avoid link twice for user1 and user2
 
 env.Append(CCFLAGS=["-DSPI_FLASH_SIZE_MAP="+str(flash_size_map)])     # NONOS-SDK 3.x user_main.c need it
