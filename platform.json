@@ -17,7 +17,7 @@
     "type": "git",
     "url": "https://github.com/platformio/platform-espressif8266.git"
   },
-  "version": "2.6.4",
+  "version": "2.6.5",
   "frameworks": {
     "arduino": {
       "package": "framework-arduinoespressif8266",

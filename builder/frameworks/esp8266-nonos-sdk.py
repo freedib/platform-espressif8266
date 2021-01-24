@@ -95,31 +95,30 @@ env.Append(
         "smartconfig", "ssl", "upgrade", "wpa", "wpa2", "wps"
     ]
 )
-#0 dio 40m 16MB firmware.elf z.flash.bin z.iron0text.bin
-#1 dio 40m 16MB firmware.elf z.user.bin
 
 # copy CCFLAGS to ASFLAGS (-x assembler-with-cpp mode)
 env.Append(ASFLAGS=env.get("CCFLAGS", [])[:])
 
 
 ###################################################################################
+# common code between esp8266-nonos-sdk and esp8266-rtos-sdk
+# OTA support
 
 
 # evaluate SPI_FLASH_SIZE_MAP flag for NONOS_SDK 3.x and set CCFLAG
 board_flash_size = int(env.BoardConfig().get("upload.maximum_size", 524288))
 flash_size_maps = [0.5, 0.25, 1.0, 0.0, 0.0, 2.0, 4.0, 0.0, 8.0, 16.0]  # ignore maps 3 and 4.prefer 5 and 6
-flash_sizes_mb = ['512KB','256KB','1MB','2MB','4MB','2MB-c1','4MB-c1','4MB-c2','8MB','16MB']
+flash_sizes_str = ['512KB','256KB','1MB','2MB','4MB','2MB-c1','4MB-c1','4MB-c2','8MB','16MB']
 try:
     flash_size_map = flash_size_maps.index(board_flash_size/1048576)
-    flash_size_mb = flash_sizes_mb[flash_size_map]
+    flash_size_str = flash_sizes_str[flash_size_map]
 except:
     flash_size_map = 6
-    flash_size_mb = '4MB-c1'
+    flash_size_str = '4MB-c1'
 # for OTA, only size maps 5, 6, 8 and 9 are supported to avoid linking twice for user1 and user2
 
 env.Append(CCFLAGS=["-DSPI_FLASH_SIZE_MAP="+str(flash_size_map)])     # NONOS-SDK 3.x user_main.c need it
-env.Append(FLASH_SIZE_MAP=flash_size_map)       # REQUIRED????        # will be used by custom uploader
-env.Append(FLASH_SIZE=board_flash_size)         # REQUIRED????        # will be used by custom uploader
+env.Append(FLASH_SIZE_STR=flash_size_str)                             # useful for custom uploader
 
 # register genbin.py BUILDER which allows to create OTA files 
 if "ota" in BUILD_TARGETS:      # if OTA, flash user1 but generate user1 and user2
@@ -129,7 +128,7 @@ if "ota" in BUILD_TARGETS:      # if OTA, flash user1 but generate user1 and use
                 action=env.VerboseAction(" ".join([
                     '"%s"' % join(platform.get_package_dir("tool-genbin"), "genbin.py"),
                     "12",       # create firmware.bin.user1.bin and firmware.bin.user2.bin
-                    "$BOARD_FLASH_MODE", "${__get_board_f_flash(__env__)}m", flash_size_mb,
+                    "$BOARD_FLASH_MODE", "${__get_board_f_flash(__env__)}m", "$FLASH_SIZE_STR",
                     "$SOURCE", "${TARGET}.user1.bin", "${TARGET}.user2.bin"
                            # could have used espressif naming: user1.4096.new.6.bin or user1.16384.new.9.bin
                 ]), "Building $TARGET"),
@@ -143,7 +142,8 @@ else:
             ElfToBin=Builder(
                 action=env.VerboseAction(" ".join([
                     '"%s"' % join(platform.get_package_dir("tool-genbin"), "genbin.py"),
-                    "0", "$BOARD_FLASH_MODE", "${__get_board_f_flash(__env__)}m", flash_size_mb,
+                    "0",        # create firmware.bin and firmware.bin.irom0text.bin
+                    "$BOARD_FLASH_MODE", "${__get_board_f_flash(__env__)}m", "$FLASH_SIZE_STR",
                     "$SOURCE", "${TARGET}", "${TARGET}.irom0text.bin"
                 ]), "Building $TARGET"),
                 suffix=".bin"
@@ -167,9 +167,6 @@ rf_cal_addr    = board_flash_size-0x5000     # 3fb000 for 4M board blank_bin
 phy_data_addr  = board_flash_size-0x4000     # 3fc000 for 4M board data_bin
 sys_param_addr = board_flash_size-0x2000     # 3fe000 for 4M board blank_bin
 
-# user1.4096.new.6.bin or user1.16384.new.9.bin
-user_bin_name = "user1."+str(int(board_flash_size/1024))+".new."+str(flash_size_map)+".bin"
-
 if "ota" in BUILD_TARGETS:      # if OTA, flash user1 but generate user1 and user2
     boot_bin  = join(FRAMEWORK_DIR, "bin", "boot_v1.7.bin")
     user_bin  = join("$BUILD_DIR", "${PROGNAME}.bin.user1.bin")      # firmware.bin.user1.bin # user1.4096.new.6.bin
@@ -188,7 +185,10 @@ env.Append(
         (hex(user_addr),      user_bin),
         (hex(phy_data_addr),  data_bin),
         (hex(sys_param_addr), blank_bin),
-        (hex(rf_cal_addr),    blank_bin)
+        (hex(rf_cal_addr),    blank_bin),
+        ("--flash_mode", "$FLASH_MODE"),
+        ("--flash_freq", "$${__get_board_f_flash(__env__)}m"),
+        ("--flash_size", "$FLASH_SIZE_STR")     # required by NONOS 3.0.4
     ]
 )
 

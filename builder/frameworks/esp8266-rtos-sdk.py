@@ -101,28 +101,7 @@ env.Append(
         "cirom", "crypto", "driver", "espconn", "espnow", "freertos", "gcc",
         "json", "hal", "lwip", "main", "mesh", "mirom", "net80211", "nopoll",
         "phy", "pp", "pwm", "smartconfig", "spiffs", "ssl", "wpa", "wps"
-    ],
-
-    BUILDERS=dict(
-        ElfToBin=Builder(
-            action=env.VerboseAction(" ".join([
-                '"%s"' % join(platform.get_package_dir("tool-esptool"), "esptool"),
-                "-eo", "$SOURCE",
-                "-bo", "${TARGET}",
-                "-bm", "$BOARD_FLASH_MODE",
-                "-bf", "${__get_board_f_flash(__env__)}",
-                "-bz", "${__get_flash_size(__env__)}",
-                "-bs", ".text",
-                "-bs", ".data",
-                "-bs", ".rodata",
-                "-bc", "-ec",
-                "-eo", "$SOURCE",
-                "-es", ".irom0.text", "${TARGET}.irom0text.bin",
-                "-ec", "-v"
-            ]), "Building $TARGET"),
-            suffix=".bin"
-        )
-    )
+    ]
 )
 
 # copy CCFLAGS to ASFLAGS (-x assembler-with-cpp mode)
@@ -130,23 +109,56 @@ env.Append(ASFLAGS=env.get("CCFLAGS", [])[:])
 
 
 ###################################################################################
+# common code between esp8266-nonos-sdk and esp8266-rtos-sdk
+# OTA support
+
 
 # evaluate SPI_FLASH_SIZE_MAP flag for NONOS_SDK 3.x and set CCFLAG
-c1 = True               # if c1, for OTA use 1024+1024, else 512+512
 board_flash_size = int(env.BoardConfig().get("upload.maximum_size", 524288))
-if board_flash_size == 16777216:             flash_size_map = 9    # 0x1000000  16M 1024+1024
-elif board_flash_size == 8388608:            flash_size_map = 8    # 0x800000    8M 1024+1024
-elif board_flash_size == 4194304 and c1:     flash_size_map = 6    # 0x400000    4M 1024+1024
-elif board_flash_size == 2097152 and c1:     flash_size_map = 5    # 0x200000    2M 1024+1024
-elif board_flash_size == 4194304 and not c1: flash_size_map = 4    # 0x400000    4M 512+512
-elif board_flash_size == 2097152 and not c1: flash_size_map = 3    # 0x200000    2M 512+512
-elif board_flash_size == 1048576:            flash_size_map = 2    # 0x100000    1M 512+512
-else:                                        flash_size_map = 1    #  0x80000    512K no OTA
-# for OTA, only size maps 5, 6, 8 and 9 are supported to avoid link twice for user1 and user2
+flash_size_maps = [0.5, 0.25, 1.0, 0.0, 0.0, 2.0, 4.0, 0.0, 8.0, 16.0]  # ignore maps 3 and 4.prefer 5 and 6
+flash_sizes_str = ['512KB','256KB','1MB','2MB','4MB','2MB-c1','4MB-c1','4MB-c2','8MB','16MB']
+try:
+    flash_size_map = flash_size_maps.index(board_flash_size/1048576)
+    flash_size_str = flash_sizes_str[flash_size_map]
+except:
+    flash_size_map = 6
+    flash_size_str = '4MB-c1'
+# for OTA, only size maps 5, 6, 8 and 9 are supported to avoid linking twice for user1 and user2
 
 env.Append(CCFLAGS=["-DSPI_FLASH_SIZE_MAP="+str(flash_size_map)])     # NONOS-SDK 3.x user_main.c need it
-env.Append(FLASH_SIZE_MAP=flash_size_map)                             # will be used to extract sections
-env.Append(FLASH_SIZE=board_flash_size)                               # will be used to extract sections
+env.Append(FLASH_SIZE_STR=flash_size_str)                             # useful for custom uploader
+
+# register genbin.py BUILDER which allows to create OTA files 
+if "ota" in BUILD_TARGETS:      # if OTA, flash user1 but generate user1 and user2
+    env.Append(
+        BUILDERS=dict(
+            ElfToBin=Builder(
+                action=env.VerboseAction(" ".join([
+                    '"%s"' % join(platform.get_package_dir("tool-genbin"), "genbin.py"),
+                    "12",       # create firmware.bin.user1.bin and firmware.bin.user2.bin
+                    "$BOARD_FLASH_MODE", "${__get_board_f_flash(__env__)}m", "$FLASH_SIZE_STR",
+                    "$SOURCE", "${TARGET}.user1.bin", "${TARGET}.user2.bin"
+                           # could have used espressif naming: user1.4096.new.6.bin or user1.16384.new.9.bin
+                ]), "Building $TARGET"),
+                suffix=".bin"
+            )
+        )
+    )
+else:
+    env.Append(
+        BUILDERS=dict(
+            ElfToBin=Builder(
+                action=env.VerboseAction(" ".join([
+                    '"%s"' % join(platform.get_package_dir("tool-genbin"), "genbin.py"),
+                    "0",        # create firmware.bin and firmware.bin.irom0text.bin
+                    "$BOARD_FLASH_MODE", "${__get_board_f_flash(__env__)}m", "$FLASH_SIZE_STR",
+                    "$SOURCE", "${TARGET}", "${TARGET}.irom0text.bin"
+                ]), "Building $TARGET"),
+                suffix=".bin"
+            )
+        )
+    )
+
 
 # create binaries list to upload
 
@@ -163,35 +175,30 @@ rf_cal_addr    = board_flash_size-0x5000     # 3fb000 for 4M board blank_bin
 phy_data_addr  = board_flash_size-0x4000     # 3fc000 for 4M board data_bin
 sys_param_addr = board_flash_size-0x2000     # 3fe000 for 4M board blank_bin
 
-# user1.4096.new.6.bin or user1.16384.new.9.bin
-user_bin = "user1."+str(int(board_flash_size/1024))+".new."+str(flash_size_map)+".bin"
-
 if "ota" in BUILD_TARGETS:      # if OTA, flash user1 but generate user1 and user2
     boot_bin  = join(FRAMEWORK_DIR, "bin", "boot_v1.7.bin")
-    user_bin  = join("$BUILD_DIR", user_bin)
+    user_bin  = join("$BUILD_DIR", "${PROGNAME}.bin.user1.bin")      # firmware.bin.user1.bin # user1.4096.new.6.bin
     user_addr = 0x1000
 else:                           # non ota
-    boot_bin  = join("$BUILD_DIR", "eagle.flash.bin")       # firmware.bin # eagle.flash.bin
-    user_bin  = join("$BUILD_DIR", "eagle.irom0text.bin")   # firmware.bin.irom0text.bin # eagle.irom0text.bin
+    boot_bin  = join("$BUILD_DIR", "${PROGNAME}.bin")                # firmware.bin # eagle.flash.bin
+    user_bin  = join("$BUILD_DIR", "${PROGNAME}.bin.irom0text.bin")  # firmware.bin.irom0text.bin # eagle.irom0text.bin
     if (env['PIOFRAMEWORK'][0] == "esp8266-rtos-sdk"):
         user_addr = 0x20000
     else:
         user_addr = 0x10000
 
-FLASH_IMAGES=[
-    (hex(0),              boot_bin),
-    (hex(user_addr),      user_bin),
-    (hex(phy_data_addr),  data_bin),
-    (hex(sys_param_addr), blank_bin),
-    (hex(rf_cal_addr),    blank_bin)
-]
-
-# standard non OTA. Original version
-FLASH_EXTRA_IMAGES=[
-    (hex(user_addr),      join("$BUILD_DIR",  "${PROGNAME}.bin.irom0text.bin")),
-    (hex(phy_data_addr),  data_bin),
-    (hex(sys_param_addr), rf_cal_addr)
-]
+env.Append(
+    FLASH_EXTRA_IMAGES=[
+        (hex(0),              boot_bin),
+        (hex(user_addr),      user_bin),
+        (hex(phy_data_addr),  data_bin),
+        (hex(sys_param_addr), blank_bin),
+        (hex(rf_cal_addr),    blank_bin),
+        ("--flash_mode", "$FLASH_MODE"),
+        ("--flash_freq", "$${__get_board_f_flash(__env__)}m"),
+        ("--flash_size", "$FLASH_SIZE_STR")     # required by NONOS 3.0.4
+    ]
+)
 
 
 # allow user to specify a LDSCRIPT_PATH in pre: SCRIPT
@@ -202,9 +209,9 @@ if not env.BoardConfig().get("build.ldscript", ""):
         else:
             LDSCRIPT_PATH=join(FRAMEWORK_DIR, "ld", "eagle.app.v6.ld")
         env.Replace(LDSCRIPT_PATH=LDSCRIPT_PATH)
-       
+
 ###################################################################################
-        
+
 
 #
 # Target: Build Driver Library

@@ -250,6 +250,7 @@ else:
 env.AddPlatformTarget("buildfs", target_firm, None, "Build Filesystem Image")
 AlwaysBuild(env.Alias("nobuild", target_firm))
 target_buildprog = env.Alias("buildprog", target_firm, target_firm)
+env.AddPlatformTarget("ota", target_firm, None, "Build Espressif OTA images")
 
 # update max upload size based on CSV file
 if env.get("PIOMAINPROG"):
