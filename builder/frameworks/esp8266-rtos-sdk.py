@@ -194,7 +194,7 @@ env.Append(
         (hex(phy_data_addr),  data_bin),
         (hex(sys_param_addr), blank_bin),
         (hex(rf_cal_addr),    blank_bin),
-        ("--flash_mode", "$FLASH_MODE"),
+        ("--flash_mode", "$BOARD_FLASH_MODE"),
         ("--flash_freq", "$${__get_board_f_flash(__env__)}m"),
         ("--flash_size", "$FLASH_SIZE_STR")     # required by NONOS 3.0.4
     ]
