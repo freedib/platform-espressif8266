@@ -99,7 +99,7 @@ env.Append(
 
     LIBS=[
         "cirom", "crypto", "driver", "espconn", "espnow", "freertos", "gcc",
-        "json", "hal", "lwip", "main", "mesh", "mirom", "net80211", "nopoll",
+        "json", "hal", "lwip", "main", "mbedtls", "mesh", "mirom", "net80211", "nopoll",
         "phy", "pp", "pwm", "smartconfig", "spiffs", "ssl", "wpa", "wps"
     ]
 )
