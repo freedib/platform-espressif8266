@@ -79,7 +79,6 @@ env.Append(
 
     CPPPATH=[
         join(FRAMEWORK_DIR, "include"),
-        join(FRAMEWORK_DIR, "extra_include"),
         join(FRAMEWORK_DIR, "driver_lib", "include"),
         join(FRAMEWORK_DIR, "third_party", "include")
     ],
