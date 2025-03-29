@@ -938,7 +938,7 @@ def get_partition_info(pt_path, pt_params):
         "offset",
     ]
 
-    if pt_params["name"]:
+    if "name" in pt_params:
         if pt_params["name"] == "*boot":
             cmd.append("--partition-boot-default")
         else:
@@ -1343,7 +1343,7 @@ env["BUILDERS"]["ElfToBin"].action = action
 
 ota_partition_params = get_partition_info(
     env.subst("$PARTITIONS_TABLE_CSV"),
-    {"name": "ota", "type": "data", "subtype": "ota"},
+    {"type": "data", "subtype": "ota"},
 )
 
 if ota_partition_params["size"] and ota_partition_params["offset"]:
