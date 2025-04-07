@@ -181,8 +181,8 @@ env.Replace(
     # Misc
     #
 
-    SIZEPROGREGEXP=r"^(?:\.irom0\.text|\.text|\.text1|\.data|\.rodata|\.flash\.\w+)\s+(\d+)\s",
-    SIZEDATAREGEXP=r"^(?:\.data|\.rodata|\.bss|\.iram0\.\w+|\.dram0\.\w+)\s+([0-9]+).*",
+    SIZEPROGREGEXP=r"^(?:\.irom0\.text|\.text|\.text1|\.data|\.rodata|\.iram0\.\w+|\.flash\.\w+)\s+(\d+)\s",
+    SIZEDATAREGEXP=r"^(?:\.data|\.rodata|\.bss|\.noinit|\.dram0\.\w+)\s+([0-9]+).*",
     SIZECHECKCMD="$SIZETOOL -A -d $SOURCES",
     SIZEPRINTCMD='$SIZETOOL -B -d $SOURCES',
 
