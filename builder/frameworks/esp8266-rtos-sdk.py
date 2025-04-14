@@ -1068,7 +1068,7 @@ if not board.get("build.ldscript", "") or True:
                 "esp8266.ld"),
         ),
         env.VerboseAction(
-            '$CC -I"$BUILD_DIR/config" -C -P -x  c -E $SOURCE -DAPP_OFFSET=$ENV_APP_OFFSET -DAPP_SIZE=$ENV_APP_SIZE -o $TARGET',
+            '$CC -I"$BUILD_DIR/config" -C -P -x  c -E $SOURCE -DAPP_OFFSET=$RTOS_APP_OFFSET -DAPP_SIZE=$RTOS_APP_SIZE -o $TARGET',
             "Generating LD script $TARGET",
         ),
     )
@@ -1280,8 +1280,8 @@ app_params = get_partition_info(env.subst("$PARTITIONS_TABLE_CSV"), partition_ta
 app_offset = app_params.get("offset")
 app_size = app_params.get("size")
 env.Replace(
-   ENV_APP_OFFSET=app_offset,
-   ENV_APP_SIZE=app_size,
+   RTOS_APP_OFFSET=app_offset,
+   RTOS_APP_SIZE=app_size,
 )
 
 #

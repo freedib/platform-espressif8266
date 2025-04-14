@@ -124,9 +124,13 @@ def __fetch_fs_size(target, source, env):
 
 
 def _update_max_upload_size(env):
-    ldsizes = _parse_ld_sizes(env.GetActualLDScript())
-    if ldsizes and "app_size" in ldsizes:
-        env.BoardConfig().update("upload.maximum_size", ldsizes['app_size'])
+    if "esp8266-rtos-sdk" in env.subst("$PIOFRAMEWORK"):
+        if "RTOS_APP_SIZE" in env:
+            env.BoardConfig().update("upload.maximum_size", _parse_size(env['RTOS_APP_SIZE']))
+    else:
+        ldsizes = _parse_ld_sizes(env.GetActualLDScript())
+        if ldsizes and "app_size" in ldsizes:
+            env.BoardConfig().update("upload.maximum_size", ldsizes['app_size'])
 
 
 def get_esptoolpy_reset_flags(resetmethod):
@@ -177,8 +181,8 @@ env.Replace(
     # Misc
     #
 
-    SIZEPROGREGEXP=r"^(?:\.irom0\.text|\.text|\.text1|\.data|\.rodata|)\s+([0-9]+).*",
-    SIZEDATAREGEXP=r"^(?:\.data|\.rodata|\.bss)\s+([0-9]+).*",
+    SIZEPROGREGEXP=r"^(?:\.irom0\.text|\.text|\.text1|\.data|\.rodata|\.iram0\.\w+|\.flash\.\w+)\s+(\d+)\s",
+    SIZEDATAREGEXP=r"^(?:\.data|\.rodata|\.bss|\.noinit|\.dram0\.\w+)\s+([0-9]+).*",
     SIZECHECKCMD="$SIZETOOL -A -d $SOURCES",
     SIZEPRINTCMD='$SIZETOOL -B -d $SOURCES',
 
