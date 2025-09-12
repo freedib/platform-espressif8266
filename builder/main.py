@@ -64,9 +64,9 @@ def _parse_ld_sizes(ldscript_path):
     appsize_re = re.compile(
         r"irom0_0_seg\s*:.+len\s*=\s*(0x[\da-f]+)", flags=re.I)
     filesystem_re = re.compile(
-        r"PROVIDE\s*\(\s*_%s_(\w+)\s*=\s*(0x[\da-f]+)\s*\)" % "FS"
-        if "arduino" in env.subst("$PIOFRAMEWORK")
-        else "SPIFFS",
+        r"PROVIDE\s*\(\s*_%s_(\w+)\s*=\s*(0x[\da-f]+)\s*\)" % (
+            "FS" if "arduino" in env.subst("$PIOFRAMEWORK") else "SPIFFS"
+        ),
         flags=re.I,
     )
     with open(ldscript_path) as fp:
@@ -398,7 +398,7 @@ elif upload_protocol == "esptool" and "esp8266-rtos-sdk" in env.subst("$PIOFRAME
     if "uploadfs" in COMMAND_LINE_TARGETS:
         env.Replace(
             UPLOADERFLAGS=[
-                "--chip", mcu,
+                "--chip", "esp8266",
                 "--port", '"$UPLOAD_PORT"',
                 "--baud", "$UPLOAD_SPEED",
                 "--before", "default_reset",
@@ -406,7 +406,7 @@ elif upload_protocol == "esptool" and "esp8266-rtos-sdk" in env.subst("$PIOFRAME
                 "write_flash", "-z",
                 "--flash_mode", "$BOARD_FLASH_MODE",
                 "--flash_size", "detect",
-                "$SPIFFS_START"
+                "$FS_START"
             ],
             UPLOADCMD='"$PYTHONEXE" "$UPLOADER" $UPLOADERFLAGS $SOURCE',
         )
