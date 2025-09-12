@@ -919,7 +919,7 @@ def generate_empty_partition_image(binary_path, image_size):
     env.Depends("$BUILD_DIR/$PROGNAME$PROGSUFFIX", empty_partition)
 
 
-def get_partition_info(pt_path, pt_offset, pt_params):
+def get_partition_info(pt_path, pt_params):
     if not os.path.isfile(pt_path):
         sys.stderr.write(
             "Missing partition table file `%s`\n" % os.path.basename(pt_path)
@@ -930,8 +930,6 @@ def get_partition_info(pt_path, pt_offset, pt_params):
         env.subst("$PYTHONEXE"),
         os.path.join(FRAMEWORK_DIR, "components", "partition_table", "parttool.py"),
         "-q",
-        "--partition-table-offset",
-        hex(pt_offset),
         "--partition-table-file",
         pt_path,
         "get_partition_info",
@@ -940,8 +938,13 @@ def get_partition_info(pt_path, pt_offset, pt_params):
         "offset",
     ]
 
-    if pt_params["name"] == "boot":
-        cmd.append("--partition-boot-default")
+    if pt_params["name"]:
+        if pt_params["name"] == "*boot":
+            cmd.append("--partition-boot-default")
+        else:
+            cmd.extend([
+                "--partition-name", pt_params["name"]
+            ])
     else:
         cmd.extend(
             [
@@ -955,8 +958,8 @@ def get_partition_info(pt_path, pt_offset, pt_params):
     result = exec_command(cmd)
     if result["returncode"] != 0:
         sys.stderr.write(
-            "Couldn't extract information for %s/%s from the partition table\n"
-            % (pt_params["type"], pt_params["subtype"])
+            "Couldn't extract information for {%s} from %s\n"
+            % (pt_params, pt_path)
         )
         sys.stderr.write(result["out"] + "\n")
         sys.stderr.write(result["err"] + "\n")
@@ -967,12 +970,6 @@ def get_partition_info(pt_path, pt_offset, pt_params):
         size, offset = result["out"].strip().split(" ", 1)
 
     return {"size": size, "offset": offset}
-
-
-def get_app_partition_offset(pt_table, pt_offset):
-    # Get the default boot partition offset
-    app_params = get_partition_info(pt_table, pt_offset, {"name": "boot"})
-    return app_params.get("offset", "0x10000")
 
 
 def install_python_deps():
@@ -1276,7 +1273,7 @@ partition_table = env.Command(
 env.Depends("$BUILD_DIR/$PROGNAME$PROGSUFFIX", partition_table)
 
 # linker needs APP_OFFSE and APP_SIZE
-app_params = get_partition_info(env.subst("$PARTITIONS_TABLE_CSV"), partition_table_offset, {"name": "boot"})
+app_params = get_partition_info(env.subst("$PARTITIONS_TABLE_CSV"), {"name": "*boot"})
 app_offset = app_params.get("offset")
 app_size = app_params.get("size")
 env.Replace(
@@ -1346,7 +1343,6 @@ env["BUILDERS"]["ElfToBin"].action = action
 
 ota_partition_params = get_partition_info(
     env.subst("$PARTITIONS_TABLE_CSV"),
-    partition_table_offset,
     {"name": "ota", "type": "data", "subtype": "ota"},
 )
 
